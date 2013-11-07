@@ -1,0 +1,10 @@
+upstream {{ slug }} {
+    server {{ ip }};
+}
+server {
+    listen 80;
+    server_name {{ site }};
+    location / {
+      proxy_pass http://{{ slug }};
+    }
+}
