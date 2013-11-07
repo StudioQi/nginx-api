@@ -32,7 +32,10 @@ class nginx():
                     'domain': domain
                 }
             )
-        service('nginx', 'restart')
+
+    def _reload_server(self):
+        service('nginx', 'reload', _bg=True, silent=True)
+        print 'server reloaded'
 
     def slugify(self, string):
         if type(string) == str:
@@ -47,6 +50,7 @@ class nginx():
             configFile = path(self.NGINX_PATH + slug)
             configFile.write_text(config)
             self._reload()
+            self._reload_server()
 
             return slug
 
@@ -57,6 +61,7 @@ class nginx():
             config = path(self.NGINX_PATH + slug)
             config.remove()
             self._reload()
+            self._reload_server()
 
     def list(self):
         self._reload()
