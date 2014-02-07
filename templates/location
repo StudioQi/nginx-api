@@ -1,0 +1,6 @@
+    location / {
+      proxy_set_header Host $host;
+      proxy_pass http://{{ slug }};
+      allow from 192.168.10.0/24;
+#htpasswd
+    }

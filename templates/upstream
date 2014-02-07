@@ -1,0 +1,3 @@
+upstream {{ slug }} {
+    server {{ ip }};
+}

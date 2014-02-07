@@ -1,6 +1,7 @@
 #-=- encoding: utf-8 -=-
-from flask import Flask, jsonify, request
-from nginx import nginx
+#salut
+from flask import Flask, jsonify, request, abort
+from nginx import nginx, DomainNotFound
 
 PORT = 5000
 IP = '0.0.0.0'
@@ -19,13 +20,21 @@ def list():
 def add():
     site = request.json['site']
     ip = request.json['ip']
-    result = nginxController.add(site, ip)
+    access = None
+    if 'htpasswd' in request.json:
+        access = request.json['htpasswd']
+
+    result = nginxController.add(site, ip, access)
     return jsonify({'slug': result})
 
 
 @app.route('/<slug>', methods=['DELETE'])
 def delete(slug):
-    nginxController.delete(slug)
+    try:
+        nginxController.delete(slug)
+    except DomainNotFound:
+        abort(404)
+
     return 'OK'
 
 
@@ -33,9 +42,17 @@ def delete(slug):
 def edit(slug):
     ip = request.json['ip']
     site = request.json['site']
-    nginxController.delete(slug)
-    result = nginxController.add(site, ip)
-    return jsonify({'slugs': result})
+    try:
+        nginxController.delete(slug)
+        htpasswd = None
+        if 'htpasswd' in request.json:
+            htpasswd = request.json['htpasswd']
+
+        result = nginxController.add(site, ip, htpasswd)
+    except DomainNotFound:
+        abort(404)
+    else:
+        return jsonify({'slugs': result})
 
 
 if __name__ == "__main__":

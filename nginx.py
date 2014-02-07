@@ -4,13 +4,34 @@ from jinja2 import Environment, PackageLoader
 from sh import service
 import slugify
 import re
+import logging
 
 env = Environment(loader=PackageLoader('nginx', 'templates'))
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+handler = logging.FileHandler('nginxapi.log')
+formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+
+
+class DomainNotFound(Exception):
+    pass
+
+
+class DomainAlreadyExists(Exception):
+    pass
+
+
+class InvalidDomain(Exception):
+    pass
 
 
 class nginx():
     sites = []
-    NGINX_PATH = '/etc/nginx/sites-enabled/'
+    NGINX_PATH = '/etc/nginx/vagrant-sites-enabled/'
 
     def __init__(self):
         self._reload()
@@ -29,39 +50,45 @@ class nginx():
                     'slug': slug,
                     'ip': ip,
                     'port': port,
-                    'domain': domain
+                    'domain': domain,
+                    'htpasswd': 'francois',
                 }
             )
 
     def _reload_server(self):
         service('nginx', 'reload', _bg=True, silent=True)
-        print 'server reloaded'
 
     def slugify(self, string):
         if type(string) == str:
             string = unicode(string)
         return slugify.slugify(string)
 
-    def add(self, _site, _ip):
+    def add(self, _site, _ip, _htpasswd=None):
         slug = self.slugify(_site)
-        if not self._find(slug) and '.pheromone.ca' in _site:
-            template = env.get_template('site')
-            config = template.render(slug=slug, ip=_ip, site=_site)
+        if '.pheromone.ca' not in _site:
+            raise InvalidDomain
+
+        if not self._find(slug):
             configFile = path(self.NGINX_PATH + slug)
+            config = self._compile_config(_site, slug, _ip, _htpasswd)
             configFile.write_text(config)
             self._reload()
             self._reload_server()
 
             return slug
+        else:
+            raise DomainAlreadyExists
 
     def delete(self, _site):
         slug = self.slugify(_site)
-
         if self._find(slug):
+            logger.debug('Deleting site {}'.format(_site))
             config = path(self.NGINX_PATH + slug)
             config.remove()
             self._reload()
             self._reload_server()
+        else:
+            raise DomainNotFound()
 
     def list(self):
         self._reload()
@@ -95,3 +122,25 @@ class nginx():
                 return domain
 
         return None
+
+    def _compile_config(self, _site, _slug, _ip, _htpasswd=None):
+        server = env.get_template('server')
+        server = server.render(site=_site)
+
+        upstream = env.get_template('upstream')
+        upstream = upstream.render(slug=_slug, ip=_ip)
+
+        location = env.get_template('location')
+        location = location.render(slug=_slug)
+
+        if _htpasswd:
+            htpasswd = env.get_template('access')
+            htpasswd = htpasswd.render(site=_site, htpasswd=_htpasswd)
+            location = location.replace('#htpasswd', htpasswd)
+        else:
+            location.replace('#htpasswd', '')
+
+        server = server.replace('#upstream', upstream)
+        server = server.replace('#location', location)
+
+        return server
