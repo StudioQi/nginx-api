@@ -45,13 +45,14 @@ class nginx():
             slug = unicode(site.name)
             (ip, port) = self._get_ip_port(content)
             domain = self._get_domain(content)
+            htpasswd = self._get_htpasswd(content)
             self.sites.append(
                 {
                     'slug': slug,
                     'ip': ip,
                     'port': port,
                     'domain': domain,
-                    'htpasswd': 'francois',
+                    'htpasswd': htpasswd,
                 }
             )
 
@@ -66,10 +67,12 @@ class nginx():
     def add(self, _site, _ip, _htpasswd=None):
         slug = self.slugify(_site)
         if '.pheromone.ca' not in _site:
-            raise InvalidDomain
+            raise InvalidDomain('Given {} domain is invalid'.format(_site))
 
         if not self._find(slug):
+            logger.debug('Adding site {}'.format(_site))
             configFile = path(self.NGINX_PATH + slug)
+            logger.debug(' {}'.format(_htpasswd))
             config = self._compile_config(_site, slug, _ip, _htpasswd)
             configFile.write_text(config)
             self._reload()
@@ -115,6 +118,15 @@ class nginx():
                 port = infos[1]
 
         return (ip, port)
+
+    def _get_htpasswd(self, content):
+        match = re.search(r'passwords/(.*);', content)
+        htpasswd = None
+        if match:
+            htpasswd = match.group(1)
+
+        logger.debug('htpasswd {}'.format(htpasswd))
+        return htpasswd
 
     def _find(self, slug):
         for domain in self.sites:

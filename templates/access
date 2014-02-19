@@ -1,3 +1,3 @@
-                satisfy any;
-                auth_basic    "{{ site }}";
-                auth_basic_user_file  passwords/{{ htpasswd }};
+            satisfy any;
+            auth_basic    "{{ site }}";
+            auth_basic_user_file  passwords/{{ htpasswd }};
