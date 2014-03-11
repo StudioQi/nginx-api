@@ -1,5 +1,4 @@
 #-=- encoding: utf-8 -=-
-#salut
 from flask import Flask, jsonify, request, abort
 from nginx import nginx, DomainNotFound
 
