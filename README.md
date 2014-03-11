@@ -11,3 +11,7 @@ The API can be run as root or any other user, as long as nginx has access to the
     - Better configuration management
     - Complete abstraction of vagrant
     - Configurable main TLD restriction
+
+# Note 
+
+Keep in mind that this project is closer to ALPHA than to STABLE. DO NOT use on production system.
