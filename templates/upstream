@@ -1,3 +1,3 @@
 upstream {{ slug }} {
-    server {{ ip }};
+    server {{ ip }}:{{ port }};
 }

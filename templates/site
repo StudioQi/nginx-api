@@ -2,10 +2,10 @@ upstream {{ slug }} {
     server {{ ip }};
 }
 server {
-    listen 80;
+    listen {{ port }};
     server_name {{ site }};
     location / {
       proxy_set_header Host $host;
-      proxy_pass http://{{ slug }};
+      proxy_pass http{%- if sslkey %}s{%- endif %}://{{ slug }};
     }
 }

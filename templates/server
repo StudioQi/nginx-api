@@ -1,6 +1,7 @@
 #upstream
 server {
-    listen 80;
+    listen {{ port }};
     server_name {{ site }};
+#ssl
 #location
 }

@@ -1,4 +1,4 @@
-#-=- encoding: utf-8 -=-
+# -=- encoding: utf-8 -=-
 from flask import Flask, jsonify, request, abort
 from nginx import nginx, DomainNotFound
 
@@ -19,11 +19,16 @@ def list():
 def add():
     site = request.json['site']
     ip = request.json['ip']
+
     access = None
+    sslkey = None
+
     if 'htpasswd' in request.json:
         access = request.json['htpasswd']
+    if 'sslkey' in request.json:
+        sslkey = request.json['sslkey']
 
-    result = nginxController.add(site, ip, access)
+    result = nginxController.add(site, ip, access, sslkey)
     return jsonify({'slug': result})
 
 
@@ -43,11 +48,16 @@ def edit(slug):
     site = request.json['site']
     try:
         nginxController.delete(slug)
+
         htpasswd = None
+        sslkey = None
+
         if 'htpasswd' in request.json:
             htpasswd = request.json['htpasswd']
+        if 'sslkey' in request.json:
+            sslkey = request.json['sslkey']
 
-        result = nginxController.add(site, ip, htpasswd)
+        result = nginxController.add(site, ip, htpasswd, sslkey)
     except DomainNotFound:
         abort(404)
     else:

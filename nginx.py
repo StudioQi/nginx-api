@@ -1,16 +1,17 @@
-#-=- encoding: utf-8 -=-
+# -=- encoding: utf-8 -=-
 from path import path
 from jinja2 import Environment, PackageLoader
 from sh import service
 import slugify
 import re
 import logging
+import os
 
 env = Environment(loader=PackageLoader('nginx', 'templates'))
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-handler = logging.FileHandler('nginxapi.log')
+handler = logging.FileHandler('/var/log/nginx-api/debug.log')
 formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 
 handler.setFormatter(formatter)
@@ -46,6 +47,7 @@ class nginx():
             (ip, port) = self._get_ip_port(content)
             domain = self._get_domain(content)
             htpasswd = self._get_htpasswd(content)
+            sslkey = self._get_sslkey(content)
             self.sites.append(
                 {
                     'slug': slug,
@@ -53,6 +55,7 @@ class nginx():
                     'port': port,
                     'domain': domain,
                     'htpasswd': htpasswd,
+                    'sslkey': sslkey,
                 }
             )
 
@@ -64,7 +67,7 @@ class nginx():
             string = unicode(string)
         return slugify.slugify(string)
 
-    def add(self, _site, _ip, _htpasswd=None):
+    def add(self, _site, _ip, _htpasswd=None, _sslkey=None):
         slug = self.slugify(_site)
         if '.pheromone.ca' not in _site:
             raise InvalidDomain('Given {} domain is invalid'.format(_site))
@@ -72,8 +75,8 @@ class nginx():
         if not self._find(slug):
             logger.debug('Adding site {}'.format(_site))
             configFile = path(self.NGINX_PATH + slug)
-            logger.debug(' {}'.format(_htpasswd))
-            config = self._compile_config(_site, slug, _ip, _htpasswd)
+            config = self._compile_config(_site, slug, _ip, _htpasswd, _sslkey)
+            # logger.debug(' {}'.format(config))
             configFile.write_text(config)
             self._reload()
             self._reload_server()
@@ -95,6 +98,7 @@ class nginx():
 
     def list(self):
         self._reload()
+        logger.debug('list : {}'.format(self.sites))
         return self.sites
 
     def _get_domain(self, content):
@@ -111,13 +115,21 @@ class nginx():
         match = re.search(r'server (.*);', content)
         if match:
             infos = match.group(1)
-            #Should be [ip, port]
+            # Should be [ip, port]
             infos = infos.split(':')
             ip = infos[0]
             if len(infos) > 1:
                 port = infos[1]
 
         return (ip, port)
+
+    def _get_sslkey(self, content):
+        sslkey = None
+        match = re.search(r'ssl_certificate_key (.*)/(.*).key;', content)
+        if match:
+            sslkey = match.group(2)
+
+        return sslkey
 
     def _get_htpasswd(self, content):
         match = re.search(r'passwords/(.*);', content)
@@ -135,24 +147,51 @@ class nginx():
 
         return None
 
-    def _compile_config(self, _site, _slug, _ip, _htpasswd=None):
+    def _compile_config(self, _site, _slug, _ip, _htpasswd=None, _sslkey=None):
+        server = self._compile_config_partial(_site, _slug, _ip, _htpasswd)
+        if _sslkey:
+            # We call the same function with the SSL param
+            server += os.linesep + self._compile_config_partial(
+                _site,
+                '{}ssl'.format(_slug),
+                _ip,
+                _htpasswd,
+                _sslkey
+            )
+        return server
+
+    def _compile_config_partial(self, _site, _slug, _ip, _htpasswd=None,
+                                _sslkey=None):
+        port = 80
+        if _sslkey:
+            port = 443
+
         server = env.get_template('server')
-        server = server.render(site=_site)
+        server = server.render(site=_site, port=port, sslkey=_sslkey)
 
         upstream = env.get_template('upstream')
-        upstream = upstream.render(slug=_slug, ip=_ip)
+        upstream = upstream.render(slug=_slug, ip=_ip, port=port)
 
         location = env.get_template('location')
-        location = location.render(slug=_slug)
+        location = location.render(slug=_slug, sslkey=_sslkey)
+
+        ssl = None
+        if _sslkey:
+            ssl = env.get_template('ssl')
+            ssl = ssl.render(sslkey=_sslkey)
 
         if _htpasswd:
             htpasswd = env.get_template('access')
             htpasswd = htpasswd.render(site=_site, htpasswd=_htpasswd)
             location = location.replace('#htpasswd', htpasswd)
         else:
-            location.replace('#htpasswd', '')
+            location = location.replace('#htpasswd', '')
 
         server = server.replace('#upstream', upstream)
         server = server.replace('#location', location)
+        if ssl:
+            server = server.replace('#ssl', ssl)
+        else:
+            server = server.replace('#ssl', '')
 
         return server
