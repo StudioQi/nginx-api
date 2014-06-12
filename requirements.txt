@@ -7,7 +7,7 @@ Werkzeug==0.9.4
 argparse==1.2.1
 itsdangerous==0.23
 path.py==4.4
-requests==2.0.1
+requests==2.3.0
 sh==1.09
 slugify==0.0.1
 wsgiref==0.1.2

@@ -12,6 +12,11 @@ The API can be run as root or any other user, as long as nginx has access to the
     - Complete abstraction of vagrant
     - Configurable main TLD restriction
 
+## License
+
+[Creative Commons Attribution 3.0 Unported] [2]
+  [2]: https://raw.github.com/Pheromone/nginx-api/master/LICENSE.txt
+
 # Note 
 
 Keep in mind that this project is closer to ALPHA than to STABLE. DO NOT use on production system.

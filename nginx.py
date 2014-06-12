@@ -69,8 +69,8 @@ class nginx():
 
     def add(self, _site, _ip, _htpasswd=None, _sslkey=None):
         slug = self.slugify(_site)
-        if '.pheromone.ca' not in _site:
-            raise InvalidDomain('Given {} domain is invalid'.format(_site))
+#        if '.pheromone.ca' not in _site:
+#            raise InvalidDomain('Given {} domain is invalid'.format(_site))
 
         if not self._find(slug):
             logger.debug('Adding site {}'.format(_site))
