@@ -44,18 +44,17 @@ class nginx():
             content = site.text()
 
             slug = unicode(site.name)
-            (ip, port) = self._get_ip_port(content)
-            domain = self._get_domain(content)
+            id = self._get_id(content)
+            uri = self._get_uri(content)
             htpasswd = self._get_htpasswd(content)
-            sslkey = self._get_sslkey(content)
+            ssl_key = self._get_ssl_key(content)
             self.sites.append(
                 {
+                    'id': int(id),
                     'slug': slug,
-                    'ip': ip,
-                    'port': port,
-                    'domain': domain,
+                    'uri': uri,
                     'htpasswd': htpasswd,
-                    'sslkey': sslkey,
+                    'ssl_key': ssl_key,
                 }
             )
 
@@ -67,16 +66,15 @@ class nginx():
             string = unicode(string)
         return slugify.slugify(string)
 
-    def add(self, _site, _ip, _htpasswd=None, _sslkey=None):
-        slug = self.slugify(_site)
+    def add(self, _id, _uri, _upstreams, _htpasswd=None, _ssl_key=None):
+        slug = self.slugify(_uri)
 #        if '.pheromone.ca' not in _site:
 #            raise InvalidDomain('Given {} domain is invalid'.format(_site))
 
         if not self._find(slug):
-            logger.debug('Adding site {}'.format(_site))
+            logger.debug('Adding site {}'.format(_uri))
             configFile = path(self.NGINX_PATH + slug)
-            config = self._compile_config(_site, slug, _ip, _htpasswd, _sslkey)
-            # logger.debug(' {}'.format(config))
+            config = self._compile_config(_id, _uri, slug, _upstreams, _htpasswd, _ssl_key)
             configFile.write_text(config)
             self._reload()
             self._reload_server()
@@ -85,11 +83,11 @@ class nginx():
         else:
             raise DomainAlreadyExists
 
-    def delete(self, _site):
-        slug = self.slugify(_site)
-        if self._find(slug):
-            logger.debug('Deleting site {}'.format(_site))
-            config = path(self.NGINX_PATH + slug)
+    def delete(self, _id):
+        domain = self._findById(_id)
+        if domain is not None:
+            logger.debug('Deleting site {}'.format(domain['uri']))
+            config = path(self.NGINX_PATH + domain['slug'])
             config.remove()
             self._reload()
             self._reload_server()
@@ -101,13 +99,21 @@ class nginx():
         logger.debug('list : {}'.format(self.sites))
         return self.sites
 
-    def _get_domain(self, content):
-        match = re.search(r'server_name (.*);', content)
-        domain = None
+    def _get_id(self, content):
+        match = re.search(r'#id: (.*)', content)
+        id = None
         if match:
-            domain = match.group(1)
+            id = match.group(1)
 
-        return domain
+        return id
+
+    def _get_uri(self, content):
+        match = re.search(r'server_name (.*);', content)
+        uri = None
+        if match:
+            uri = match.group(1)
+
+        return uri
 
     def _get_ip_port(self, content):
         ip = None
@@ -123,13 +129,13 @@ class nginx():
 
         return (ip, port)
 
-    def _get_sslkey(self, content):
-        sslkey = None
+    def _get_ssl_key(self, content):
+        ssl_key = None
         match = re.search(r'ssl_certificate_key (.*)/(.*).key;', content)
         if match:
-            sslkey = match.group(2)
+            ssl_key = match.group(2)
 
-        return sslkey
+        return ssl_key
 
     def _get_htpasswd(self, content):
         match = re.search(r'passwords/(.*);', content)
@@ -137,7 +143,6 @@ class nginx():
         if match:
             htpasswd = match.group(1)
 
-        logger.debug('htpasswd {}'.format(htpasswd))
         return htpasswd
 
     def _find(self, slug):
@@ -145,40 +150,53 @@ class nginx():
             if domain['slug'] == slug:
                 return domain
 
+    def _findById(self, id):
+        for domain in self.sites:
+            if domain['id'] == int(id):
+                return domain
+
         return None
 
-    def _compile_config(self, _site, _slug, _ip, _htpasswd=None, _sslkey=None):
-        server = self._compile_config_partial(_site, _slug, _ip, _htpasswd)
-        if _sslkey:
+    def _compile_config(self, _id, _site, _slug, _upstreams, _htpasswd=None,
+                        _ssl_key=None):
+        server = self._compile_config_partial(
+            _id,
+            _site,
+            _slug,
+            _upstreams,
+            _htpasswd
+        )
+        if _ssl_key:
             # We call the same function with the SSL param
             server += os.linesep + self._compile_config_partial(
+                _id,
                 _site,
                 '{}ssl'.format(_slug),
-                _ip,
+                _upstreams,
                 _htpasswd,
-                _sslkey
+                _ssl_key
             )
         return server
 
-    def _compile_config_partial(self, _site, _slug, _ip, _htpasswd=None,
-                                _sslkey=None):
+    def _compile_config_partial(self, _id, _site, _slug, _upstreams, _htpasswd=None,
+                                _ssl_key=None):
         port = 80
-        if _sslkey:
+        if _ssl_key:
             port = 443
 
         server = env.get_template('server')
-        server = server.render(site=_site, port=port, sslkey=_sslkey)
+        server = server.render(id=_id, site=_site, port=port, ssl_key=_ssl_key)
 
         upstream = env.get_template('upstream')
-        upstream = upstream.render(slug=_slug, ip=_ip, port=port)
+        upstream = upstream.render(slug=_slug, upstreams=_upstreams, ssl_key=_ssl_key)
 
         location = env.get_template('location')
-        location = location.render(slug=_slug, sslkey=_sslkey)
+        location = location.render(slug=_slug, ssl_key=_ssl_key)
 
         ssl = None
-        if _sslkey:
+        if _ssl_key:
             ssl = env.get_template('ssl')
-            ssl = ssl.render(sslkey=_sslkey)
+            ssl = ssl.render(ssl_key=_ssl_key)
 
         if _htpasswd:
             htpasswd = env.get_template('access')

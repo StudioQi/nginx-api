@@ -17,51 +17,53 @@ def list():
 
 @app.route('/', methods=['POST'])
 def add():
-    site = request.json['site']
-    ip = request.json['ip']
+    id = request.json['id']
+    uri = request.json['uri']
+    upstreams = request.json['upstreams']
 
     access = None
-    sslkey = None
+    ssl_key = None
 
     if 'htpasswd' in request.json:
         access = request.json['htpasswd']
-    if 'sslkey' in request.json:
-        sslkey = request.json['sslkey']
+    if 'ssl_key' in request.json:
+        ssl_key = request.json['ssl_key']
 
-    result = nginxController.add(site, ip, access, sslkey)
+    result = nginxController.add(id, uri, upstreams, access, ssl_key)
     return jsonify({'slug': result})
 
 
-@app.route('/<slug>', methods=['DELETE'])
-def delete(slug):
+@app.route('/<int:id>', methods=['DELETE'])
+def deleteById(id):
     try:
-        nginxController.delete(slug)
+        nginxController.delete(id)
     except DomainNotFound:
         abort(404)
 
     return 'OK'
 
 
-@app.route('/<slug>', methods=['PUT'])
-def edit(slug):
-    ip = request.json['ip']
-    site = request.json['site']
+@app.route('/<int:id>', methods=['PUT'])
+def edit(id):
+    site = request.json['uri']
     try:
-        nginxController.delete(slug)
+        nginxController.delete(id)
+    except Exception:
+        pass
 
-        htpasswd = None
-        sslkey = None
+    upstreams = request.json['upstreams']
+    uri = request.json['uri']
+    access = None
+    ssl_key = None
 
-        if 'htpasswd' in request.json:
-            htpasswd = request.json['htpasswd']
-        if 'sslkey' in request.json:
-            sslkey = request.json['sslkey']
+    if 'htpasswd' in request.json:
+       access = request.json['htpasswd']
+    if 'ssl_key' in request.json:
+       ssl_key = request.json['ssl_key']
 
-        result = nginxController.add(site, ip, htpasswd, sslkey)
-    except DomainNotFound:
-        abort(404)
-    else:
-        return jsonify({'slugs': result})
+
+    result = nginxController.add(id, uri, upstreams, access, ssl_key)
+    return jsonify({'slugs': result})
 
 
 if __name__ == "__main__":

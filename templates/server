@@ -1,4 +1,5 @@
 #upstream
+#id: {{ id }}
 server {
     listen {{ port }};
     server_name {{ site }};
