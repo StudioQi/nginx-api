@@ -1,5 +1,12 @@
 upstream {{ slug }} {
-    {% for upstream in upstreams %}
-    server {{ upstream.ip }}:{% if ssl_key != None %}{{ upstream.port_ssl }}{% else %}{{ upstream.port }}{% endif %};
-    {% endfor %}
+    {% for upstream in upstreams -%}
+    server {{ upstream.ip }}:
+           {%- if ssl_key != None -%}
+              {{ upstream.port_ssl }}
+           {%- else -%}
+              {{ upstream.port }}
+           {%- endif -%}
+           {%- if upstream.state != 'up' %} {{upstream.state}}
+           {%- endif -%};
+    {% endfor -%}
 }
