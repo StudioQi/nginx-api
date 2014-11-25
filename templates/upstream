@@ -6,7 +6,7 @@ upstream {{ slug }} {
            {%- else -%}
               {{ upstream.port }}
            {%- endif -%}
-           {%- if upstream.state != 'up' %} {{upstream.state}}
+           {%- if upstream.state is defined and upstream.state != 'up' %} {{upstream.state}}
            {%- endif -%};
     {% endfor -%}
 }
