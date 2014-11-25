@@ -68,6 +68,7 @@ class nginx():
 
     def add(self, _id, _uri, _upstreams, _htpasswd=None, _ssl_key=None):
         slug = self.slugify(_uri)
+        self._reload()
 #        if '.pheromone.ca' not in _site:
 #            raise InvalidDomain('Given {} domain is invalid'.format(_site))
 
@@ -84,6 +85,7 @@ class nginx():
             raise DomainAlreadyExists
 
     def delete(self, _id):
+        self._reload()
         domain = self._findById(_id)
         if domain is not None:
             logger.debug('Deleting site {}'.format(domain['uri']))

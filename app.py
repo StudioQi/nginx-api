@@ -2,7 +2,7 @@
 from flask import Flask, jsonify, request, abort
 from nginx import nginx, DomainNotFound
 
-PORT = 5000
+PORT = 5001
 IP = '0.0.0.0'
 DEBUG = True
 app = Flask(__name__)
