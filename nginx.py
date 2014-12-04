@@ -46,6 +46,7 @@ class nginx():
             slug = unicode(site.name)
             id = self._get_id(content)
             uri = self._get_uri(content)
+            aliases = self._get_aliases(content)
             htpasswd = self._get_htpasswd(content)
             ssl_key = self._get_ssl_key(content)
             self.sites.append(
@@ -53,6 +54,7 @@ class nginx():
                     'id': int(id),
                     'slug': slug,
                     'uri': uri,
+                    'aliases': aliases,
                     'htpasswd': htpasswd,
                     'ssl_key': ssl_key,
                 }
@@ -66,7 +68,7 @@ class nginx():
             string = unicode(string)
         return slugify.slugify(string)
 
-    def add(self, _id, _uri, _upstreams, _htpasswd=None, _ssl_key=None):
+    def add(self, _id, _uri, _aliases, _upstreams, _htpasswd=None, _ssl_key=None):
         slug = self.slugify(_uri)
         self._reload()
 #        if '.pheromone.ca' not in _site:
@@ -75,7 +77,7 @@ class nginx():
         if not self._find(slug):
             logger.debug('Adding site {}'.format(_uri))
             configFile = path(self.NGINX_PATH + slug)
-            config = self._compile_config(_id, _uri, slug, _upstreams, _htpasswd, _ssl_key)
+            config = self._compile_config(_id, _uri, _aliases, slug, _upstreams, _htpasswd, _ssl_key)
             configFile.write_text(config)
             self._reload()
             self._reload_server()
@@ -113,9 +115,17 @@ class nginx():
         match = re.search(r'server_name (.*);', content)
         uri = None
         if match:
-            uri = match.group(1)
+            uri = match.group(1).split(' ')[0]
 
         return uri
+
+    def _get_aliases(self, content):
+        match = re.search(r'server_name (.*);', content)
+        aliases = None
+        if match:
+            aliases = match.group(1).split(' ')[1:]
+
+        return aliases
 
     def _get_ip_port(self, content):
         ip = None
@@ -159,11 +169,12 @@ class nginx():
 
         return None
 
-    def _compile_config(self, _id, _site, _slug, _upstreams, _htpasswd=None,
+    def _compile_config(self, _id, _site, _aliases, _slug, _upstreams, _htpasswd=None,
                         _ssl_key=None):
         server = self._compile_config_partial(
             _id,
             _site,
+            _aliases,
             _slug,
             _upstreams,
             _htpasswd
@@ -173,6 +184,7 @@ class nginx():
             server += os.linesep + self._compile_config_partial(
                 _id,
                 _site,
+                _aliases,
                 '{}ssl'.format(_slug),
                 _upstreams,
                 _htpasswd,
@@ -180,14 +192,14 @@ class nginx():
             )
         return server
 
-    def _compile_config_partial(self, _id, _site, _slug, _upstreams, _htpasswd=None,
+    def _compile_config_partial(self, _id, _site, _aliases, _slug, _upstreams, _htpasswd=None,
                                 _ssl_key=None):
         port = 80
         if _ssl_key:
             port = 443
 
         server = env.get_template('server')
-        server = server.render(id=_id, site=_site, port=port, ssl_key=_ssl_key)
+        server = server.render(id=_id, site=_site, aliases=_aliases, port=port, ssl_key=_ssl_key)
 
         upstream = env.get_template('upstream')
         upstream = upstream.render(slug=_slug, upstreams=_upstreams, ssl_key=_ssl_key)

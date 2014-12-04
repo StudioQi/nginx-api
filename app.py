@@ -20,6 +20,7 @@ def add():
     id = request.json['id']
     uri = request.json['uri']
     upstreams = request.json['upstreams']
+    aliases = request.json['aliases']
 
     access = None
     ssl_key = None
@@ -29,7 +30,7 @@ def add():
     if 'ssl_key' in request.json:
         ssl_key = request.json['ssl_key']
 
-    result = nginxController.add(id, uri, upstreams, access, ssl_key)
+    result = nginxController.add(id, uri, aliases, upstreams, access, ssl_key)
     return jsonify({'slug': result})
 
 
@@ -45,24 +46,23 @@ def deleteById(id):
 
 @app.route('/<int:id>', methods=['PUT'])
 def edit(id):
-    site = request.json['uri']
     try:
         nginxController.delete(id)
     except Exception:
         pass
 
+    aliases = request.json['aliases']
     upstreams = request.json['upstreams']
     uri = request.json['uri']
     access = None
     ssl_key = None
 
     if 'htpasswd' in request.json:
-       access = request.json['htpasswd']
+        access = request.json['htpasswd']
     if 'ssl_key' in request.json:
-       ssl_key = request.json['ssl_key']
+        ssl_key = request.json['ssl_key']
 
-
-    result = nginxController.add(id, uri, upstreams, access, ssl_key)
+    result = nginxController.add(id, uri, aliases, upstreams, access, ssl_key)
     return jsonify({'slugs': result})
 
 

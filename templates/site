@@ -3,7 +3,7 @@ upstream {{ slug }} {
 }
 server {
     listen {{ port }};
-    server_name {{ site }};
+    server_name {{ site }}{% if aliases is defined %}{% for alias in aliases %} {{ alias }}{% endfor %}{% endif %};
     location / {
       proxy_set_header Host $host;
       proxy_pass http{%- if sslkey %}s{%- endif %}://{{ slug }};
