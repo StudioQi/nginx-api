@@ -185,7 +185,7 @@ class nginx():
                 _id,
                 _site,
                 _aliases,
-                '{}ssl'.format(_slug),
+                _slug,
                 _upstreams,
                 _htpasswd,
                 _ssl_key
@@ -198,14 +198,22 @@ class nginx():
         if _ssl_key:
             port = 443
 
+        _upstreams_has_ssl = False
+        for upstream in _upstreams:
+            if 'port_ssl' in upstream and upstream['port_ssl'] != 0:
+                _upstreams_has_ssl = True
+
+        if _upstreams_has_ssl and _ssl_key:
+            _slug = '{}ssl'.format(_slug)
+
         server = env.get_template('server')
         server = server.render(id=_id, site=_site, aliases=_aliases, port=port, ssl_key=_ssl_key)
 
         upstream = env.get_template('upstream')
-        upstream = upstream.render(slug=_slug, upstreams=_upstreams, ssl_key=_ssl_key)
+        upstream = upstream.render(slug=_slug, upstreams=_upstreams, ssl_key=_ssl_key, upstreams_has_ssl=_upstreams_has_ssl)
 
         location = env.get_template('location')
-        location = location.render(slug=_slug, ssl_key=_ssl_key)
+        location = location.render(slug=_slug, ssl_key=_ssl_key, upstreams=_upstreams, upstreams_has_ssl=_upstreams_has_ssl)
 
         ssl = None
         if _ssl_key:

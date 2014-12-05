@@ -1,12 +1,15 @@
+{% if ssl_key != None and upstreams_has_ssl -%}
+upstream {{ slug }} {
+{% for upstream in upstreams -%}
+    {% if upstream.port_ssl != 0 -%}
+    server {{ upstream.ip }}:{{ upstream.port_ssl }}{%- if upstream.state is defined and upstream.state != 'up' %} {{upstream.state}}{%- endif -%};
+    {% endif %}
+{% endfor -%}
+}
+{% elif ssl_key == None -%}
 upstream {{ slug }} {
     {% for upstream in upstreams -%}
-    server {{ upstream.ip }}:
-           {%- if ssl_key != None -%}
-              {{ upstream.port_ssl }}
-           {%- else -%}
-              {{ upstream.port }}
-           {%- endif -%}
-           {%- if upstream.state is defined and upstream.state != 'up' %} {{upstream.state}}
-           {%- endif -%};
-    {% endfor -%}
+    server {{ upstream.ip }}:{{ upstream.port }}{%- if upstream.state is defined and upstream.state != 'up' %} {{upstream.state}}{%- endif -%};
+    {% endfor %}
 }
+{% endif %}
