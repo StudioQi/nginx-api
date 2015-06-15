@@ -86,6 +86,10 @@ class nginx():
         else:
             raise DomainAlreadyExists
 
+    def save_ssl(self, name, content):
+        """This should save the file in the desired folder for SSL"""
+        pass
+
     def delete(self, _id):
         self._reload()
         domain = self._findById(_id)
