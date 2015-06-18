@@ -71,9 +71,12 @@ def add_ssl():
     """Receive an SSL certificate"""
     query = request.get_json()
     name = query.get('name')
-    content = query.get('value')
-    with open('/etc/ssl/private/{0}.ssl'.format(name), 'w') as f:
-        f.write(content)
+    cert = query.get('cert')
+    key = query.get('key')
+    with open('/etc/ssl/private/{0}.crt'.format(name), 'w') as f:
+        f.write(cert)
+    with open('/etc/ssl/private/{0}.key'.format(name), 'w') as f:
+        f.write(key)
 
 
 @app.route('/ssl/<name>', methods=['DELETE'])
