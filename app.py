@@ -1,13 +1,10 @@
 # -=- encoding: utf-8 -=-
 from flask import Flask, jsonify, request, abort
 from nginx import nginx, DomainNotFound
-from os.path import abspath, realpath
-from os import remove
 
 PORT = 5001
 IP = '0.0.0.0'
 DEBUG = True
-SSL_PATH = '/etc/ssl/private'
 app = Flask(__name__)
 
 nginxController = nginx()
@@ -76,27 +73,13 @@ def add_ssl():
     name = query.get('name')
     cert = query.get('cert')
     key = query.get('key')
-    with open('{0}/{1}.crt'.format(SSL_PATH, name), 'w') as f:
-        f.write(cert)
-    with open('{0}/{1}.key'.format(SSL_PATH, name), 'w') as f:
-        f.write(key)
+    return jsonify({'state': nginxController.save_ssl(name, key, cert)})
 
 
 @app.route('/ssl/<name>', methods=['DELETE'])
 def delete_ssl(name):
     """Delete an SSL certificate"""
-    # Resolve the path
-    key_path = abspath(
-        realpath(
-            '{0}/{1}.key'.format(SSL_PATH, name)))
-    cert_path = abspath(
-        realpath(
-            '{0}/{1}.key'.format(SSL_PATH, name)))
-    if not key_path.startswith(SSL_PATH) or \
-       not cert_path.startswith(SSL_PATH):
-        return False
-    remove(key_path)
-    remove(cert_path)
+    return jsonify({'state': nginxController.delete_ssl(name)})
 
 if __name__ == "__main__":
     app.debug = DEBUG
