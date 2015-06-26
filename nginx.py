@@ -192,8 +192,10 @@ class nginx():
             )
         return server
 
-    def _compile_config_partial(self, _id, _site, _aliases, _slug, _upstreams, _htpasswd=None,
-                                _ssl_key=None):
+    def _compile_config_partial(
+            self, _id, _site, _aliases,
+            _slug, _upstreams, _htpasswd=None,
+            _ssl_key=None):
         port = 80
         if _ssl_key:
             port = 443
@@ -207,14 +209,42 @@ class nginx():
             _slug = '{}ssl'.format(_slug)
 
         server = env.get_template('server')
-        server = server.render(id=_id, site=_site, aliases=_aliases, port=port, ssl_key=_ssl_key)
+        server = server.render(
+            id=_id, site=_site, aliases=_aliases,
+            port=port, ssl_key=_ssl_key)
 
-        upstream = env.get_template('upstream')
-        upstream = upstream.render(slug=_slug, upstreams=_upstreams, ssl_key=_ssl_key, upstreams_has_ssl=_upstreams_has_ssl)
+        def get_upstream_by_location():
+            locations = {}
+            _locations = []
+            upstreams = []
+            for upstream in _upstreams:
+                upstream_location = upstream.get('location', None)
+                if upstream_location not in locations:
+                    locations[upstream_location] = []
+                locations[upstream_location].append(upstream)
+            for _up in locations:
+                upstream = env.get_template('upstream')
+                upstreams.append(
+                    upstream.render(
+                        slug=_slug,
+                        upstreams=locations[_up],
+                        location=_up,
+                        ssl_key=_ssl_key,
+                        upstreams_has_ssl=_upstreams_has_ssl))
 
-        location = env.get_template('location')
-        location = location.render(slug=_slug, ssl_key=_ssl_key, upstreams=_upstreams, upstreams_has_ssl=_upstreams_has_ssl)
+                location = env.get_template('location')
+                _locations.append(
+                    location.render(
+                        slug=_slug, ssl_key=_ssl_key,
+                        upstreams=locations[_up],
+                        location=_up,
+                        upstreams_has_ssl=_upstreams_has_ssl))
+            return [
+                '\n'.join(_locations),
+                '\n'.join(upstreams)
+                ]
 
+        location, upstream = get_upstream_by_location()
         ssl = None
         if _ssl_key:
             ssl = env.get_template('ssl')
@@ -223,9 +253,9 @@ class nginx():
         if _htpasswd:
             htpasswd = env.get_template('access')
             htpasswd = htpasswd.render(site=_site, htpasswd=_htpasswd)
-            location = location.replace('#htpasswd', htpasswd)
+            server = server.replace('#htpasswd', htpasswd)
         else:
-            location = location.replace('#htpasswd', '')
+            server = server.replace('#htpasswd', '')
 
         server = server.replace('#upstream', upstream)
         server = server.replace('#location', location)
