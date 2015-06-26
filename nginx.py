@@ -68,7 +68,10 @@ class nginx():
             string = unicode(string)
         return slugify.slugify(string)
 
-    def add(self, _id, _uri, _aliases, _upstreams, _htpasswd=None, _ssl_key=None):
+    def add(
+            self, _id,
+            _uri, _aliases, _upstreams,
+            _htpasswd=None, _ssl_key=None):
         slug = self.slugify(_uri)
         self._reload()
 #        if '.pheromone.ca' not in _site:
@@ -77,7 +80,9 @@ class nginx():
         if not self._find(slug):
             logger.debug('Adding site {}'.format(_uri))
             configFile = path(self.NGINX_PATH + slug)
-            config = self._compile_config(_id, _uri, _aliases, slug, _upstreams, _htpasswd, _ssl_key)
+            config = self._compile_config(
+                _id, _uri, _aliases,
+                slug, _upstreams, _htpasswd, _ssl_key)
             configFile.write_text(config)
             self._reload()
             self._reload_server()
@@ -217,34 +222,40 @@ class nginx():
             locations = {}
             _locations = []
             upstreams = []
+            # populate a dict of locations, with all their respective upstreams
             for upstream in _upstreams:
                 upstream_location = upstream.get('location', None)
                 if upstream_location not in locations:
                     locations[upstream_location] = []
                 locations[upstream_location].append(upstream)
-            for _up in locations:
+            for loc in locations:
                 upstream = env.get_template('upstream')
                 upstreams.append(
                     upstream.render(
                         slug=_slug,
-                        upstreams=locations[_up],
-                        location=_up,
+                        upstreams=locations[loc],
+                        location=loc,
                         ssl_key=_ssl_key,
                         upstreams_has_ssl=_upstreams_has_ssl))
 
                 location = env.get_template('location')
-                _locations.append(
-                    location.render(
-                        slug=_slug, ssl_key=_ssl_key,
-                        upstreams=locations[_up],
-                        location=_up,
-                        upstreams_has_ssl=_upstreams_has_ssl))
+                try:
+                    ws = all([x.get('websocket') for x in locations[loc]])
+                    t = location.render(
+                            slug=_slug, ssl_key=_ssl_key,
+                            websocket=ws,
+                            location=loc,
+                            upstreams_has_ssl=_upstreams_has_ssl)
+                    _locations.append(t)
+                except Exception as e:
+                    logger.debug(e)
             return [
                 '\n'.join(_locations),
                 '\n'.join(upstreams)
                 ]
 
         location, upstream = get_upstream_by_location()
+
         ssl = None
         if _ssl_key:
             ssl = env.get_template('ssl')
