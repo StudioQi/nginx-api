@@ -243,7 +243,7 @@ class nginx():
         ssl = None
         if _ssl_key:
             ssl = env.get_template('ssl')
-            ssl = ssl.render(ssl_key=_ssl_key)
+            ssl = ssl.render(ssl_path=SSL_PATH, ssl_key=_ssl_key)
 
         if _htpasswd:
             htpasswd = env.get_template('access')
