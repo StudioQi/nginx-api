@@ -4,5 +4,6 @@ server {
     listen {{ port }};
     server_name {{ site }}{% if aliases is defined %}{% for alias in aliases %} {{ alias.uri }}{% endfor %}{% endif %};
 #ssl
+#htpasswd
 #location
 }

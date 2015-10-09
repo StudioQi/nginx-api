@@ -1,7 +1,10 @@
-    location / {
+    location {{ location if location != None else '/' }} {
+      {% if websocket %}
+      proxy_set_header Upgrade $http_upgrade;
+      proxy_set_header Connection "upgrade";
+      {% endif %}
       proxy_set_header Host            $host;
       proxy_set_header X-Forwarded-For $remote_addr;
       proxy_set_header X-Real-IP       $remote_addr;
       proxy_pass http{%- if ssl_key and upstreams_has_ssl -%}s{%- endif -%}://{{ slug }};
-#htpasswd
     }
