@@ -66,6 +66,21 @@ def edit(id):
     return jsonify({'slugs': result})
 
 
+@app.route('/ssl', methods=['POST'])
+def add_ssl():
+    """Receive an SSL certificate"""
+    query = request.get_json()
+    name = query.get('name')
+    cert = query.get('cert')
+    key = query.get('key')
+    return jsonify({'state': nginxController.save_ssl(name, key, cert)})
+
+
+@app.route('/ssl/<name>', methods=['DELETE'])
+def delete_ssl(name):
+    """Delete an SSL certificate"""
+    return jsonify({'state': nginxController.delete_ssl(name)})
+
 if __name__ == "__main__":
     app.debug = DEBUG
     app.run(IP, PORT)

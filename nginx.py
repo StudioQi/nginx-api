@@ -6,8 +6,11 @@ import slugify
 import re
 import logging
 import os
+from os.path import abspath, realpath
+from os import remove
 
 env = Environment(loader=PackageLoader('nginx', 'templates'))
+SSL_PATH = '/etc/ssl/private'
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -90,6 +93,28 @@ class nginx():
             return slug
         else:
             raise DomainAlreadyExists
+
+    def save_ssl(self, name, key, cert):
+        """This should save the file in the desired folder for SSL"""
+        with open('{0}/{1}.crt'.format(SSL_PATH, name), 'w') as f:
+            f.write(cert)
+        with open('{0}/{1}.key'.format(SSL_PATH, name), 'w') as f:
+            f.write(key)
+        return name
+
+    def delete_ssl(self, name):
+        # Resolve the path
+        key_path = abspath(
+            realpath(
+                '{0}/{1}.key'.format(SSL_PATH, name)))
+        cert_path = abspath(
+            realpath(
+                '{0}/{1}.crt'.format(SSL_PATH, name)))
+        if not key_path.startswith(SSL_PATH) or \
+           not cert_path.startswith(SSL_PATH):
+            return False
+        remove(key_path)
+        remove(cert_path)
 
     def delete(self, _id):
         self._reload()
@@ -275,7 +300,7 @@ class nginx():
         ssl = None
         if _ssl_key:
             ssl = env.get_template('ssl')
-            ssl = ssl.render(ssl_key=_ssl_key)
+            ssl = ssl.render(ssl_path=SSL_PATH, ssl_key=_ssl_key)
 
         if _htpasswd:
             htpasswd = env.get_template('access')
