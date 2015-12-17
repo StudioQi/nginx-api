@@ -1,6 +1,6 @@
 # -=- encoding: utf-8 -=-
 from flask import Flask, jsonify, request, abort
-from nginx import nginx, DomainNotFound
+from nginx_api.nginx import nginx, DomainNotFound
 
 PORT = 5001
 IP = '0.0.0.0'

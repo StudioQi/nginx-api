@@ -9,12 +9,15 @@ import os
 from os.path import abspath, realpath
 from os import remove
 
-env = Environment(loader=PackageLoader('nginx', 'templates'))
-SSL_PATH = '/etc/ssl/private'
+env = Environment(loader=PackageLoader('nginx_api', 'templates'))
+SSL_PATH = os.environ.get('SSL_PATH', '/etc/ssl/private')
+LOGS = os.environ.get('LOGS', '/var/log/nginx-api/debug.log')
+NGINX_CONFIG_PATH = os.environ.get('NGINX_CONFIG_PATH',
+                                   '/etc/nginx/vagrant-sites-enabled/')
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-handler = logging.FileHandler('/var/log/nginx-api/debug.log')
+handler = logging.FileHandler(LOGS)
 formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 
 handler.setFormatter(formatter)
@@ -35,7 +38,7 @@ class InvalidDomain(Exception):
 
 class nginx():
     sites = []
-    NGINX_PATH = '/etc/nginx/vagrant-sites-enabled/'
+    NGINX_PATH = NGINX_CONFIG_PATH
 
     def __init__(self):
         self._reload()
@@ -44,6 +47,7 @@ class nginx():
         sitesPath = path(self.NGINX_PATH).files()
         self.sites = []
         for site in sitesPath:
+            print(site)
             content = site.text()
 
             slug = unicode(site.name)
