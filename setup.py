@@ -14,7 +14,5 @@ setup(name='nginx_api',
       install_requires=required,
       url='https://jeto.io',
       packages=['nginx_api'],
-      data_files=[
-          ('templates', glob('templates/*'))
-      ]
+      include_package_data=True
 )

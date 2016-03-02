@@ -1,0 +1,2 @@
+recursive-include nginx_api/templates *
+recursive-include nginx_api/static *
